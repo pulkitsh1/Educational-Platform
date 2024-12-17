@@ -1,0 +1,8 @@
+.git
+.DS_Store
+.vscode
+*.log
+*.pyc
+_pycache_
+./venv
+./mysql_data
