@@ -47,3 +47,11 @@ Once all dependencies are installed run the following Command for running the ap
 ```bash
 python app.py
 ```
+After running the application server, all table will be made automatically in your connected Database.
+
+### API Documentation
+For getting to know about the API's, what their Request and Response body contains, run the following url in browser after running the application server:
+
+```url
+http://127.0.0.1:5000/swagger
+```
