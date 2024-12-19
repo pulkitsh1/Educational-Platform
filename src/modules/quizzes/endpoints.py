@@ -1,7 +1,6 @@
-from flask import abort, Response
+from flask import abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
-import logging, json
 from http import HTTPStatus
 from sqlalchemy import and_
 from marshmallow import ValidationError
@@ -10,32 +9,34 @@ from src.modules.quizzes.models import Quizz, Question
 from src.modules.courses.models import Course
 from src.modules.quizzes.parameter import Post_req, Res_req
 from src.modules.quizzes.response import QuizzResponse
+from src.utils.helper import handle_error
 
 api = Blueprint("Quizzes",__name__,description="Operations on Quizzes")
 
-@api.route('/api/courses/<course_id>/quizzes')
-class QuizzOperations(MethodView):
+@api.route('/api/courses/<course_id>/quizzes/page/<num>')
+class GettingQuizzes(MethodView):
 
     @api.response(HTTPStatus.OK,schema=QuizzResponse(many=True))
-    def get(self, course_id):
+    def get(self, course_id, num):
         try:
-            res = Quizz.query.filter(and_(Quizz.course_id == course_id, Quizz.status == 'active')).all()
-
+            if num.isdigit():
+                page = int(num)
+                per_page = 10
+            else:
+                raise Exception("Invalid page number.", HTTPStatus.BAD_REQUEST)
+            
+            res = Quizz.query.filter(and_(Quizz.course_id == course_id, Quizz.status == 'active')).paginate(page=page, per_page=per_page)
+            
             if res == []:
                 raise Exception("There is no Quizzes with this Course id.", HTTPStatus.NOT_FOUND)
             
             return res
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
+
+@api.route('/api/courses/<course_id>/quizzes')
+class QuizzOperations(MethodView):
 
     @api.arguments(schema=Post_req())
     def post(self, req_data, course_id):
@@ -53,15 +54,7 @@ class QuizzOperations(MethodView):
             return {"message":"Quizz added successfully to the Course.","status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
 
 @api.route('/api/quizzes/<id>')
@@ -77,15 +70,7 @@ class QuizzOperationsID(MethodView):
             return res
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
     @api.arguments(schema=Post_req())
     def put(self, req_data, id):
@@ -103,15 +88,7 @@ class QuizzOperationsID(MethodView):
             return {"message":"Quizzes added successfully to the Course.","status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
     def delete(self,id):
         try:
@@ -126,15 +103,7 @@ class QuizzOperationsID(MethodView):
             return {'message':'Quizz successfully Deleted',"status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
 @api.route('/api/quizzes/<id>/result')
 class QuizzResult(MethodView):
@@ -157,15 +126,7 @@ class QuizzResult(MethodView):
             return {'message':f'You Scored: {marks}',"status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
 
 

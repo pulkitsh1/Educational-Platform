@@ -1,7 +1,6 @@
-from flask import abort, Response
+from flask import abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
-import logging, json
 from http import HTTPStatus
 from marshmallow import ValidationError
 from sqlalchemy import and_
@@ -9,31 +8,33 @@ from src.service_modules.db.conn import db
 from src.modules.courses.models import Course, Chapter
 from src.modules.courses.parameter import Post_req, Put_req
 from src.modules.courses.response import CourseResponse
+from src.utils.helper import handle_error
 
 api = Blueprint("Courses",__name__,description="Operations on Courses")
 
-@api.route('/api/courses')
-class CourseOperations(MethodView):
+@api.route('/api/courses/page/<num>')
+class GettingCourses(MethodView):
 
     @api.response(HTTPStatus.OK,schema=CourseResponse(many=True))
-    def get(self):
+    def get(self,num):
         try:
-            res = Course.query.filter(and_(Course.status == "published", Course.visibility == "public")).all()
+            if num.isdigit():
+                page = int(num)
+                per_page = 10
+            else:
+                raise Exception("Invalid page number.", HTTPStatus.BAD_REQUEST)
+            
+            res = Course.query.filter(and_(Course.status == "published", Course.visibility == "public")).paginate(page=page, per_page=per_page)
             if res == None:
-                raise Exception("The Course id is not listed", HTTPStatus.NOT_FOUND)
+                raise Exception("The are no Courses", HTTPStatus.NOT_FOUND)
 
             return res
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
+
+@api.route('/api/courses')
+class CourseOperations(MethodView):
 
     @api.arguments(schema=Post_req())
     def post(self, req_data):
@@ -48,15 +49,7 @@ class CourseOperations(MethodView):
             return {"message":"Course added successfully.","status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
 @api.route('/api/courses/<id>')
 class CourseOperationsID(MethodView):
@@ -71,15 +64,7 @@ class CourseOperationsID(MethodView):
             return res
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
     @api.arguments(schema=Put_req())
     def put(self,req_data, id):
@@ -97,15 +82,7 @@ class CourseOperationsID(MethodView):
             return {"message":"Chapter added to the course successfully.","status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
  
     def delete(self, id):
         try:
@@ -120,15 +97,7 @@ class CourseOperationsID(MethodView):
             return {'message':'Course successfully Deleted',"status": HTTPStatus.OK}
         
         except Exception as e:
-            error_message = str(e.args[0]) if e.args else 'An error occurred'
-            status_code = e.args[1] if len(e.args) > 1 else HTTPStatus.INTERNAL_SERVER_ERROR
-            logging.exception(error_message)
-            error_message = {
-                'error': error_message,
-                'status': status_code
-            }
-            error_message = json.dumps(error_message)
-            abort(Response(error_message, status_code, mimetype='application/json'))
+            abort(handle_error(e))
 
 @api.errorhandler(ValidationError)
 def handle_marshmallow_error(e):
